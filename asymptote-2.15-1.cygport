@@ -1,0 +1,34 @@
+inherit emacs vim
+
+HOMEPAGE="http://asymptote.sourceforge.net/"
+SRC_URI="mirror://sourceforge/asymptote/${P}.src.tgz"
+
+PATCH_URI="
+	mirror://portage/media-gfx/${PN}/files/${PN}-2.15-xdg-utils.patch
+	mirror://portage/media-gfx/${PN}/files/${PN}-2.15-info.patch
+	2.13-cygwin.patch
+"
+
+DIFF_EXCLUDES="asy.list *.log run*.cc *.dvi"
+
+src_compile() {
+	cd ${S}
+	cygautoreconf
+	lndirs
+	cd ${B}
+	cygconf --disable-gc \
+		--with-latex=/usr/share/texmf/tex/latex \
+		--with-context=/usr/share/texmf/tex/context/third
+	cygmake
+	cygmake -k -C doc
+}
+
+src_install() {
+	cd ${B}
+	cyginstall
+
+	doemacs ${S}/base/*.el
+
+	viminto syntax
+	dovim ${S}/base/asy.vim
+}

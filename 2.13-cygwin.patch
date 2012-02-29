@@ -1,0 +1,259 @@
+--- origsrc/texlive-20110705-source/utils/asymptote/configure.ac	2011-06-20 12:32:21.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/configure.ac	2012-01-22 21:07:54.572996900 -0600
+@@ -287,23 +287,6 @@ AC_ARG_ENABLE(offscreen,
+ 
+ if test "x$enable_gl" != "xno"; then
+ case "$OSTYPE" in
+-     cygwin)
+-              if test "x$enable_offscreen" != "xyes"; then
+-                AC_CHECK_HEADER(GL/gl.h,
+-				  [AC_DEFINE(HAVE_LIBGL, 1,
+-		     [Define if you have the `opengl32' library (-lopengl32).])
+-			     LIBS=$LIBS"-lopengl32 "],
+-				   AC_MSG_NOTICE([*** Could not find libopengl32: will compile without OpenGL support ***]))
+-              fi
+-	    AC_CHECK_LIB([GLU], [gluNewNurbsRenderer],[AC_DEFINE(HAVE_LIBGLU, 1,
+-		              [Define to 1 if you have the `glu32' library (-lglu32).]) LIBS=$LIBS"-lglu32 "],
+-	    AC_MSG_NOTICE([*** Could not find libglu32: will compile without OpenGL support ***]))
+-	       	       AC_CHECK_HEADER(GL/glut.h,
+-				  [AC_DEFINE(HAVE_LIBGLUT, 1,
+-		     [Define if you have the `freeglut' library (-lfreeglut).])
+-			     LIBS=$LIBS"-lfreeglut "],
+-				   AC_MSG_NOTICE([*** Could not find libfreeglut: will compile without GLUT support ***]))
+-        ;;                                 
+      darwin*) 
+               if test "x$enable_offscreen" != "xyes"; then
+                 AC_CHECK_HEADER(OpenGL/gl.h,
+--- origsrc/texlive-20110705-source/utils/asymptote/glrender.cc	2011-06-18 17:32:52.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/glrender.cc	2012-01-22 21:14:18.807033100 -0600
+@@ -14,15 +14,6 @@
+ #ifdef HAVE_GL
+ 
+ #ifdef HAVE_LIBGLUT
+-#ifdef __CYGWIN__
+-#ifndef FGAPI
+-#define FGAPI GLUTAPI
+-#endif
+-#ifndef FGAPIENTRY
+-#define FGAPIENTRY APIENTRY
+-#endif
+-#endif
+-
+ #define GLUT_BUILDING_LIB
+ #endif // HAVE_LIBGLUT
+ 
+@@ -559,14 +550,10 @@ void fullscreen(bool reposition=true)
+   Width=screenWidth;
+   Height=screenHeight;
+   reshape0(Width,Height);
+-#ifdef __CYGWIN__
+-  glutFullScreen();
+-#else
+   if(reposition)
+     glutPositionWindow(0,0);
+   glutReshapeWindow(Width,Height);
+   glutPostRedisplay();
+-#endif    
+ }
+ 
+ void fitscreen(bool reposition=true) 
+@@ -1356,9 +1343,7 @@ void glrender(const string& prefix, cons
+ {
+   bool offscreen=getSetting<bool>("offscreen");
+ 
+-#ifndef __CYGWIN__    
+   Iconify=getSetting<bool>("iconify");
+-#endif
+   static bool initializedView=false;
+ 
+   width=max(width,1.0);
+--- origsrc/texlive-20110705-source/utils/asymptote/locate.cc	2009-05-15 19:19:13.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/locate.cc	2012-01-22 21:14:26.947044400 -0600
+@@ -70,15 +70,6 @@ string locateFile(string id)
+   for (file_list_t::iterator leaf = filenames.begin();
+        leaf != filenames.end();
+        ++leaf) {
+-#ifdef __CYGWIN__
+-    size_t p;
+-    while ((p=leaf->find('\\')) < string::npos)
+-      (*leaf)[p]='/';
+-    if ((p=leaf->find(':')) < string::npos && p > 0) {
+-      (*leaf)[p]='/';
+-      leaf->insert(0,"/cygdrive/");
+-    }
+-#endif    
+ 
+     if ((*leaf)[0] == '/') {
+       string file = *leaf;
+--- origsrc/texlive-20110705-source/utils/asymptote/main.cc	2011-06-18 17:32:52.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/main.cc	2012-01-22 21:14:40.267062800 -0600
+@@ -27,10 +27,6 @@
+ 
+ #include "common.h"
+ 
+-#ifdef __CYGWIN__
+-#define NOMINMAX
+-#endif
+-
+ #ifdef HAVE_LIBSIGSEGV
+ #include <sigsegv.h>
+ #endif
+--- origsrc/texlive-20110705-source/utils/asymptote/picture.cc	2011-06-19 07:38:30.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/picture.cc	2012-01-22 21:15:01.537092100 -0600
+@@ -248,9 +248,6 @@ void texinit()
+         name=stripExt(name).substr(0,pos);
+         unlink((name+".aux").c_str());
+         cmd.push_back("-jobname="+name.substr(0,pos));
+-#ifdef __CYGWIN__
+-        cmd.push_back("NUL"); // For MikTeX
+-#endif
+       }
+     }
+     cmd.push_back("\\scrollmode");
+--- origsrc/texlive-20110705-source/utils/asymptote/psfile.cc	2011-05-27 21:18:52.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/psfile.cc	2012-01-22 21:15:07.547100400 -0600
+@@ -122,9 +122,6 @@ void psfile::close()
+   if(out) {
+     out->flush();
+     if(!filename.empty()) {
+-#ifdef __CYGWIN__  
+-      chmod(filename.c_str(),~settings::mask & 0777);
+-#endif	    
+       if(!out->good())
+         // Don't call reportError since this may be called on handled_error.
+         reportFatal("Cannot write to "+filename);
+--- origsrc/texlive-20110705-source/utils/asymptote/runfile.in	2011-05-27 21:18:52.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/runfile.in	2012-01-22 21:17:24.837289900 -0600
+@@ -12,10 +12,6 @@ file*    => primFile()
+ #include "triple.h"
+ #include "array.h"
+ 
+-#ifdef __CYGWIN__
+-extern "C" int mkstemp(char *c);
+-#endif
+-
+ using namespace camp;
+ using namespace settings;
+ using namespace vm;
+--- origsrc/texlive-20110705-source/utils/asymptote/runlabel.cc	2011-05-27 21:18:52.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/runlabel.cc	2012-01-23 00:39:30.104957100 -0600
+@@ -141,11 +141,7 @@ array *readpath(const string& psname, bo
+   cmd.push_back("-q");
+   cmd.push_back("-dBATCH");
+   if(safe) cmd.push_back("-dSAFER");
+-#ifdef __CYGWIN__
+-  const string null="NUL";
+-#else
+   const string null="/dev/null";
+-#endif
+   cmd.push_back("-sDEVICE=epswrite");
+   cmd.push_back("-sOutputFile="+null);
+   cmd.push_back(psname);
+--- origsrc/texlive-20110705-source/utils/asymptote/runlabel.in	2011-05-27 21:18:52.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/runlabel.in	2012-01-22 21:15:50.697160000 -0600
+@@ -97,11 +97,7 @@ array *readpath(const string& psname, bo
+   cmd.push_back("-q");
+   cmd.push_back("-dBATCH");
+   if(safe) cmd.push_back("-dSAFER");
+-#ifdef __CYGWIN__
+-  const string null="NUL";
+-#else
+   const string null="/dev/null";
+-#endif
+   cmd.push_back("-sDEVICE=epswrite");
+   cmd.push_back("-sOutputFile="+null);
+   cmd.push_back(psname);
+--- origsrc/texlive-20110705-source/utils/asymptote/runsystem.in	2010-06-14 18:14:16.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/runsystem.in	2012-01-22 21:16:05.387180200 -0600
+@@ -238,7 +238,6 @@ Int convert(string args=emptystring, str
+ Int animate(string args=emptystring, string file=emptystring,
+             string format=emptystring)
+ {
+-#ifndef __CYGWIN__
+   string name=convertname(file,format);
+   if(view()) {
+     mem::vector<string> cmd;
+@@ -247,7 +246,6 @@ Int animate(string args=emptystring, str
+     cmd.push_back(name);
+     return System(cmd,0,false,"animate","your animated GIF viewer");
+   }
+-#endif  
+   return 0;
+ }
+ 
+--- origsrc/texlive-20110705-source/utils/asymptote/settings.cc	2011-06-18 17:32:52.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/settings.cc	2012-01-22 21:17:49.877324400 -0600
+@@ -89,7 +89,7 @@ mode_t mask;
+   
+ string systemDir=ASYMPTOTE_SYSDIR;
+ 
+-#ifndef __CYGWIN__
++#if 1
+   
+ bool msdos=false;
+ string HOME="HOME";
+@@ -1367,11 +1367,6 @@ void initDir() {
+   if(initdir.empty())
+     initdir=Getenv(HOME.c_str(),msdos)+dirsep+"."+suffix;
+   
+-#ifdef __CYGWIN__  
+-  mask=umask(0);
+-  if(mask == 0) mask=0027;
+-  umask(mask);
+-#endif  
+   if(verbose > 1)
+     cerr << "Using configuration directory " << initdir << endl;
+   mkdir(initdir.c_str(),0777);
+@@ -1557,10 +1552,8 @@ Int getScroll()
+     if(terminal) {
+       int error;
+       error=setupterm(terminal,1,&error);
+-#ifndef __CYGWIN__      
+       if(error == 0) scroll=lines > 2 ? lines-1 : 1;
+       else
+-#endif
+ 	scroll=0;
+     } else scroll=0;
+ 
+--- origsrc/texlive-20110705-source/utils/asymptote/util.cc	2010-04-19 18:59:33.000000000 -0500
++++ src/texlive-20110705-source/utils/asymptote/util.cc	2012-01-22 21:16:42.027230800 -0600
+@@ -86,10 +86,6 @@ char *StrdupMalloc(string s)
+ string stripDir(string name)
+ {
+   size_t p;
+-#ifdef __CYGWIN__  
+-  p=name.rfind('\\');
+-  if(p < string::npos) name.erase(0,p+1);
+-#endif  
+   p=name.rfind('/');
+   if(p < string::npos) name.erase(0,p+1);
+   return name;
+@@ -99,14 +95,6 @@ string stripFile(string name)
+ {
+   size_t p;
+   bool dir=false;
+-#ifdef __CYGWIN__  
+-  p=name.rfind('\\');
+-  if(p < string::npos) {
+-    dir=true;
+-    while(p > 0 && name[p-1] == '\\') --p;
+-    name.erase(p+1);
+-  }
+-#endif  
+   p=name.rfind('/');
+   if(p < string::npos) {
+     dir=true;
+@@ -375,13 +363,6 @@ const char *setPath(const char *s, bool
+ void push_command(mem::vector<string>& a, const string& s) 
+ {
+   a.push_back(s);
+-#ifdef __CYGWIN__
+-  if(s == "cmd") {
+-    a.push_back("/c");
+-    a.push_back("start");
+-    a.push_back("\"\"");
+-  }
+-#endif      
+ }
+ 
+ void popupHelp() {
