@@ -1,5 +1,5 @@
 category: Publishing
-requires: ImageMagick gsl libfftw3_3 libgcc1 libGL1 libGLU1 libglut3 libncurses10 libreadline7 libstdc++6 python python-imaging python-tkinter texlive-collection-latexextra xdg-utils zlib0
+requires: ImageMagick gsl libfftw3_3 libgcc1 libGL1 libGLU1 libglut3 libncurses10 libreadline7 libstdc++6 python python-imaging python-tkinter texlive-collection-latexextra zlib0
 sdesc: "Vector graphics language for TeX"
 ldesc: "Asymptote is a powerful descriptive vector graphics language for 
 technical drawing, inspired by MetaPost but with an improved C++-like 
